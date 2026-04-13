@@ -1,4 +1,5 @@
 const Order = require('../models/Order');
+const Product = require('../models/Product');
 
 // @desc    Create new order
 // @route   POST /api/orders
@@ -10,6 +11,41 @@ const addOrderItems = async (req, res) => {
       res.status(400).json({ message: 'No order items' });
       return;
     } else {
+      // Verify stock for all items before placing order
+      for (let i = 0; i < products.length; i++) {
+        const item = products[i];
+        const product = await Product.findById(item.productId || item.product);
+        if (!product) {
+          return res.status(404).json({ message: `Product ${item.name} not found` });
+        }
+        
+        if (product.stockItems && product.stockItems.length > 0) {
+           const stockItem = product.stockItems.find(si => si.size === item.size && si.color === item.color);
+           if (!stockItem || stockItem.stock < item.quantity) {
+             return res.status(400).json({ message: `Product "${item.name}" (Size: ${item.size || 'N/A'}, Color: ${item.color || 'N/A'}) is out of stock` });
+           }
+        } else {
+           if (product.stock < item.quantity) {
+             return res.status(400).json({ message: `Product "${item.name}" is out of stock or does not have enough quantity` });
+           }
+        }
+      }
+
+      // Decrement stock for all items
+      for (let i = 0; i < products.length; i++) {
+        const item = products[i];
+        const product = await Product.findById(item.productId || item.product);
+        
+        if (product.stockItems && product.stockItems.length > 0) {
+           const stockItem = product.stockItems.find(si => si.size === item.size && si.color === item.color);
+           if (stockItem) {
+             stockItem.stock -= item.quantity;
+           }
+        }
+        product.stock -= item.quantity;
+        await product.save();
+      }
+
       const order = new Order({
         user,
         customer,

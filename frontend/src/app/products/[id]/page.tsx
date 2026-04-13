@@ -114,6 +114,8 @@ export default function ProductDetailsPage() {
        price: product.price,
        image: mainImage || (product.images && product.images.length > 0 ? product.images[0] : (product.image || "/images/kaftan-1.jpg")),
        quantity,
+       size: selectedSize,
+       color: selectedColor
     });
     setAddedToCart(true);
 
@@ -121,6 +123,12 @@ export default function ProductDetailsPage() {
   };
 
   const currentDisplayImg = mainImage || (product.images && product.images.length > 0 ? product.images[0] : (product.image || "/images/kaftan-1.jpg"));
+  let availableStock = product?.stock || 0;
+  if (product?.stockItems && product.stockItems.length > 0 && selectedSize && selectedColor) {
+    const si = product.stockItems.find((s:any) => s.size === selectedSize && s.color === selectedColor);
+    availableStock = si ? si.stock : 0;
+  }
+  const isOutOfStock = availableStock <= 0;
 
   return (
     <div className="pt-20">
@@ -266,8 +274,9 @@ export default function ProductDetailsPage() {
                   {quantity}
                 </span>
                 <button
-                  onClick={() => setQuantity(quantity + 1)}
-                  className="w-12 h-12 rounded-sm border border-border hover:border-primary transition-colors flex items-center justify-center"
+                  onClick={() => setQuantity(Math.min(quantity + 1, availableStock || 1))}
+                  disabled={isOutOfStock || quantity >= availableStock}
+                  className={`w-12 h-12 rounded-sm border border-border transition-colors flex items-center justify-center ${isOutOfStock || quantity >= availableStock ? 'opacity-50 cursor-not-allowed' : 'hover:border-primary'}`}
                 >
                   +
                 </button>
@@ -275,13 +284,22 @@ export default function ProductDetailsPage() {
             </div>
 
             {/* Add to Cart Button */}
-            <button
-              onClick={handleAddToCart}
-              className={`btn-primary py-4 rounded-sm font-display text-base tracking-wider uppercase transition-all duration-300 mb-4 ${addedToCart ? "opacity-75" : ""
-                }`}
-            >
-              {addedToCart ? "✓ Added to Cart!" : "Add to Cart"}
-            </button>
+            {isOutOfStock ? (
+              <button
+                disabled
+                className="w-full border py-4 rounded-sm font-display text-base tracking-wider uppercase mb-4 opacity-50 cursor-not-allowed bg-red-600/10 text-red-600 border-red-600"
+              >
+                Out of Stock
+              </button>
+            ) : (
+              <button
+                onClick={handleAddToCart}
+                className={`btn-primary py-4 rounded-sm font-display text-base tracking-wider uppercase transition-all duration-300 mb-4 ${addedToCart ? "opacity-75" : ""
+                  }`}
+              >
+                {addedToCart ? "✓ Added to Cart!" : "Add to Cart"}
+              </button>
+            )}
 
             {/* View Cart Link */}
             {addedToCart && (

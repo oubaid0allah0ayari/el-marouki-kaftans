@@ -19,6 +19,7 @@ const ProductCard = ({ product }: { product: any }) => {
   
   const defaultImage = (product.images && product.images.length > 0) ? product.images[0] : (product.image || "/images/kaftan-1.jpg");
   const [activeImage, setActiveImage] = useState(defaultImage);
+  const isOutOfStock = product.stock <= 0;
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -47,10 +48,15 @@ const ProductCard = ({ product }: { product: any }) => {
         <div className="absolute inset-0 bg-gradient-to-t from-brown/60 via-brown/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
         {/* Category badge */}
-        <div className="absolute top-3 left-3 flex gap-2">
+        <div className="absolute top-3 left-3 flex gap-2 flex-col items-start">
           <span className="inline-block px-3 py-1 text-xs font-display uppercase tracking-wider bg-background/90 backdrop-blur-sm text-foreground rounded-sm">
             {categoryLabels[product.category as CategoryKey] || product.category || "Kaftan"}
           </span>
+          {isOutOfStock && (
+            <span className="inline-block px-3 py-1 text-xs font-display uppercase tracking-wider bg-red-600/90 backdrop-blur-sm text-white rounded-sm">
+              Out of Stock
+            </span>
+          )}
         </div>
 
         {/* Quick view text on hover */}
@@ -107,16 +113,18 @@ const ProductCard = ({ product }: { product: any }) => {
         <div className="grid grid-cols-2 gap-2">
           <Link
             href={`/products/${product._id || product.id}`}
-            className="btn-primary text-center text-xs py-2.5 block px-2 whitespace-nowrap"
+            className={`btn-primary text-center text-xs py-2.5 block px-2 whitespace-nowrap ${isOutOfStock ? 'col-span-2' : ''}`}
           >
             View Details
           </Link>
-          <button
-            onClick={handleAddToCart}
-            className="btn-gold text-center text-xs py-2.5 block px-2 whitespace-nowrap"
-          >
-            Add to Cart
-          </button>
+          {!isOutOfStock && (
+            <button
+              onClick={handleAddToCart}
+              className="btn-gold text-center text-xs py-2.5 block px-2 whitespace-nowrap"
+            >
+              Add to Cart
+            </button>
+          )}
         </div>
       </div>
     </div>

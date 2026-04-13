@@ -40,7 +40,9 @@ export default function CheckoutPage() {
           productId: item.id,
           name: item.name,
           price: item.price,
-          quantity: item.quantity
+          quantity: item.quantity,
+          size: item.size,
+          color: item.color
         })),
         totalPrice,
         paymentMethod // e.g. "cod" or "card"
@@ -220,12 +222,17 @@ export default function CheckoutPage() {
           <h2 className="font-display text-2xl mb-6">Your Order</h2>
           <div className="space-y-4 mb-6 pb-6 border-b border-border max-h-60 overflow-y-auto pr-2">
             {cart.map((item) => (
-              <div key={item.id} className="flex gap-4 items-center">
+              <div key={item.cartId || item.id} className="flex gap-4 items-center">
                 <div className="w-16 h-20 relative rounded overflow-hidden flex-shrink-0 bg-secondary">
                   <Image src={item.image} alt={item.name} fill className="object-cover" />
                 </div>
                 <div className="flex-grow">
                   <h4 className="font-display text-sm md:text-base">{item.name}</h4>
+                  {(item.size || item.color) && (
+                    <p className="font-body text-xs text-muted-foreground">
+                      {item.size && `Size: ${item.size}`} {item.size && item.color && '|'} {item.color && `Color: ${item.color}`}
+                    </p>
+                  )}
                   <p className="font-body text-xs text-muted-foreground">Qty: {item.quantity}</p>
                 </div>
                 <div className="font-elegant text-accent font-semibold whitespace-nowrap">
