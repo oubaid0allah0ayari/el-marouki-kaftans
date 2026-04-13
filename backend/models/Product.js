@@ -33,10 +33,25 @@ const productSchema = mongoose.Schema(
         required: true,
       },
     ],
+    variants: [
+      {
+        colorName: { type: String, required: true },
+        hexCode: { type: String, required: true },
+        image: { type: String, required: true },
+      }
+    ],
     stock: {
       type: Number,
       required: true,
       default: 0,
+    },
+    category: {
+      type: String,
+      required: false,
+    },
+    isArchived: {
+      type: Boolean,
+      default: false,
     },
   },
   {

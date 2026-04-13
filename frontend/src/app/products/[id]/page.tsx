@@ -47,7 +47,7 @@ export default function ProductDetailsPage() {
   useEffect(() => {
     const fetchProduct = async () => {
       try {
-        const res = await fetch(`http://localhost:5000/api/products/${id}`);
+        const res = await fetch(`http://localhost:5001/api/products/${id}`);
         if (res.ok) {
           const data = await res.json();
           setProduct(data);
@@ -55,7 +55,7 @@ export default function ProductDetailsPage() {
           else if (data.image) setMainImage(data.image);
           
           // Fetch related
-          const relatedRes = await fetch("http://localhost:5000/api/products");
+          const relatedRes = await fetch("http://localhost:5001/api/products");
           if (relatedRes.ok) {
             const all = await relatedRes.json();
             setRelated(all.filter((p: any) => p._id !== id).slice(0, 4));
@@ -68,7 +68,7 @@ export default function ProductDetailsPage() {
         const localProd = localProducts.find((p) => p.id === Number(id));
         setProduct(localProd || null);
         if (localProd) {
-          if (localProd.images?.length > 0) setMainImage(localProd.images[0]);
+          if ((localProd as any).images?.length > 0) setMainImage((localProd as any).images[0]);
           else if (localProd.image) setMainImage(localProd.image);
         }
         setRelated(localProducts.filter((p) => p.id !== Number(id)).slice(0, 4));
@@ -202,29 +202,51 @@ export default function ProductDetailsPage() {
                 )}
               </div>
               <div className="flex flex-wrap gap-4">
-                {product.colors?.map((color: string, index: number) => (
-                  <button
-                    key={color}
-                    onClick={() => {
-                        setSelectedColor(color);
-                        if (product.images && product.images[index]) {
-                          setMainImage(product.images[index]);
-                        } else if (product.images && product.images[0]) {
-                          setMainImage(product.images[0]); // fallback if fewer images than colors
-                        }
-                    }}
-                    title={color}
-                    className={`relative w-8 h-8 rounded-full shadow-sm transition-all duration-300 ${
-                      selectedColor === color ? "ring-2 ring-offset-2 ring-primary scale-110" : "hover:scale-105 border border-border"
-                    }`}
-                    style={{ backgroundColor: getColorHex(color) }}
-                  >
-                     {/* Inner indicator if white color so circle isnt invisible */}
-                    {(getColorHex(color) === '#ffffff' || getColorHex(color) === '#fdfbf7') && (
-                       <span className="absolute inset-0 rounded-full border border-black/10 pointer-events-none"></span>
-                    )}
-                  </button>
-                ))}
+                {product.variants && product.variants.length > 0 ? (
+                  product.variants.map((variant: any) => (
+                    <button
+                      key={variant.colorName}
+                      onClick={() => {
+                          setSelectedColor(variant.colorName);
+                          if (variant.image) {
+                            setMainImage(variant.image);
+                          }
+                      }}
+                      title={variant.colorName}
+                      className={`relative w-8 h-8 rounded-full shadow-sm transition-all duration-300 ${
+                        selectedColor === variant.colorName ? "ring-2 ring-offset-2 ring-primary scale-110" : "hover:scale-105 border border-border"
+                      }`}
+                      style={{ backgroundColor: variant.hexCode }}
+                    >
+                       {(variant.hexCode.toLowerCase() === '#ffffff') && (
+                          <span className="absolute inset-0 rounded-full border border-black/10 pointer-events-none"></span>
+                       )}
+                    </button>
+                  ))
+                ) : (
+                  product.colors?.map((color: string, index: number) => (
+                    <button
+                      key={color}
+                      onClick={() => {
+                          setSelectedColor(color);
+                          if (product.images && product.images[index]) {
+                            setMainImage(product.images[index]);
+                          } else if (product.images && product.images[0]) {
+                            setMainImage(product.images[0]);
+                          }
+                      }}
+                      title={color}
+                      className={`relative w-8 h-8 rounded-full shadow-sm transition-all duration-300 ${
+                        selectedColor === color ? "ring-2 ring-offset-2 ring-primary scale-110" : "hover:scale-105 border border-border"
+                      }`}
+                      style={{ backgroundColor: getColorHex(color) }}
+                    >
+                      {(getColorHex(color) === '#ffffff' || getColorHex(color) === '#fdfbf7') && (
+                         <span className="absolute inset-0 rounded-full border border-black/10 pointer-events-none"></span>
+                      )}
+                    </button>
+                  ))
+                )}
               </div>
             </div>
 

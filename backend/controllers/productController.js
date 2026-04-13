@@ -31,7 +31,7 @@ const getProductById = async (req, res) => {
 // @route   POST /api/products
 const createProduct = async (req, res) => {
   try {
-    const { name, description, price, images, sizes, colors, stock } = req.body;
+    const { name, description, price, images, sizes, colors, stock, category, isArchived, variants } = req.body;
 
     const product = new Product({
       name,
@@ -40,12 +40,16 @@ const createProduct = async (req, res) => {
       images,
       sizes,
       colors,
+      variants: variants || [],
       stock,
+      category,
+      isArchived: isArchived || false,
     });
 
     const createdProduct = await product.save();
     res.status(201).json(createdProduct);
   } catch (error) {
+    console.error("Create Product Error: ", error);
     res.status(500).json({ message: 'Server Error', error: error.message });
   }
 };
@@ -54,18 +58,21 @@ const createProduct = async (req, res) => {
 // @route   PUT /api/products/:id
 const updateProduct = async (req, res) => {
   try {
-    const { name, description, price, images, sizes, colors, stock } = req.body;
+    const { name, description, price, images, sizes, colors, stock, category, isArchived, variants } = req.body;
 
     const product = await Product.findById(req.params.id);
 
     if (product) {
       product.name = name || product.name;
       product.description = description || product.description;
-      product.price = price || product.price;
+      product.price = price !== undefined ? price : product.price;
       product.images = images || product.images;
       product.sizes = sizes || product.sizes;
       product.colors = colors || product.colors;
-      product.stock = stock || product.stock;
+      product.variants = variants || product.variants;
+      product.stock = stock !== undefined ? stock : product.stock;
+      product.category = category || product.category;
+      product.isArchived = isArchived !== undefined ? isArchived : product.isArchived;
 
       const updatedProduct = await product.save();
       res.json(updatedProduct);

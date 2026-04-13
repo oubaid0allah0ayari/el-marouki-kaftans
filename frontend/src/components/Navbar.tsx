@@ -3,11 +3,15 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useCart } from "@/context/CartContext";
+import { useAuth } from "@/context/AuthContext";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const pathname = usePathname();
+  const { totalItems } = useCart();
+  const { user, logout } = useAuth();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -49,7 +53,7 @@ const Navbar = () => {
             </span>
           </Link>
 
-          {/* Desktop Nav */}
+          {/* Desktop Nav & Actions */}
           <div className="hidden md:flex items-center gap-10">
             {links.map((link) => (
               <Link
@@ -73,32 +77,80 @@ const Navbar = () => {
                 />
               </Link>
             ))}
+
+            {user?.role === 'admin' && (
+              <Link href="/admin" className="font-body text-sm tracking-wider uppercase text-accent hover:text-primary transition-colors duration-300">
+                Admin
+              </Link>
+            )}
+
+            {user ? (
+              <div className="flex items-center gap-6">
+                <Link href="/profile" className="font-body text-sm tracking-wider uppercase text-muted-foreground hover:text-primary transition-colors duration-300">
+                  Profile
+                </Link>
+                <button onClick={logout} className="font-body text-sm tracking-wider uppercase text-muted-foreground hover:text-primary transition-colors duration-300">
+                  Logout
+                </button>
+              </div>
+            ) : (
+              <Link href="/login" className="font-body text-sm tracking-wider uppercase text-muted-foreground hover:text-primary transition-colors duration-300">
+                Login
+              </Link>
+            )}
+
+            {/* Desktop Cart Icon */}
+            <Link href="/cart" className="relative text-foreground hover:text-primary transition-colors flex items-center">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+              </svg>
+              {totalItems > 0 && (
+                <span className="absolute -top-1.5 -right-2 bg-primary text-cream text-[10px] w-4 h-4 flex justify-center items-center rounded-full font-bold">
+                  {totalItems}
+                </span>
+              )}
+            </Link>
           </div>
 
-          {/* Mobile Menu Button */}
-          <button
-            onClick={() => setIsOpen(!isOpen)}
-            className="md:hidden p-2 text-foreground relative w-10 h-10 flex items-center justify-center"
-            aria-label="Toggle menu"
-          >
-            <div className="w-6 flex flex-col gap-1.5">
-              <span
-                className={`block h-0.5 bg-foreground transition-all duration-300 origin-center ${
-                  isOpen ? "rotate-45 translate-y-2" : ""
-                }`}
-              />
-              <span
-                className={`block h-0.5 bg-foreground transition-all duration-300 ${
-                  isOpen ? "opacity-0 scale-x-0" : ""
-                }`}
-              />
-              <span
-                className={`block h-0.5 bg-foreground transition-all duration-300 origin-center ${
-                  isOpen ? "-rotate-45 -translate-y-2" : ""
-                }`}
-              />
-            </div>
-          </button>
+          {/* Mobile Actions: Cart & Menu Button */}
+          <div className="flex md:hidden items-center gap-4">
+            {/* Mobile Cart Icon */}
+            <Link href="/cart" className="relative text-foreground flex items-center">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+              </svg>
+              {totalItems > 0 && (
+                <span className="absolute -top-1.5 -right-2 bg-primary text-cream text-[10px] w-4 h-4 flex justify-center items-center rounded-full font-bold">
+                  {totalItems}
+                </span>
+              )}
+            </Link>
+
+            {/* Mobile Menu Button */}
+            <button
+              onClick={() => setIsOpen(!isOpen)}
+              className="p-2 text-foreground relative w-10 h-10 flex items-center justify-center"
+              aria-label="Toggle menu"
+            >
+              <div className="w-6 flex flex-col gap-1.5">
+                <span
+                  className={`block h-0.5 bg-foreground transition-all duration-300 origin-center ${
+                    isOpen ? "rotate-45 translate-y-2" : ""
+                  }`}
+                />
+                <span
+                  className={`block h-0.5 bg-foreground transition-all duration-300 ${
+                    isOpen ? "opacity-0 scale-x-0" : ""
+                  }`}
+                />
+                <span
+                  className={`block h-0.5 bg-foreground transition-all duration-300 origin-center ${
+                    isOpen ? "-rotate-45 -translate-y-2" : ""
+                  }`}
+                />
+              </div>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -106,11 +158,11 @@ const Navbar = () => {
       <div
         className={`md:hidden overflow-hidden transition-all duration-500 ease-in-out ${
           isOpen
-            ? "max-h-64 opacity-100"
+            ? "max-h-[400px] opacity-100 border-t border-border"
             : "max-h-0 opacity-0"
         }`}
       >
-        <div className="px-4 py-3 bg-background/98 backdrop-blur-md border-t border-border">
+        <div className="px-4 py-3 bg-background/98 backdrop-blur-md">
           <div className="flex flex-col gap-1">
             {links.map((link) => (
               <Link
@@ -125,6 +177,27 @@ const Navbar = () => {
                 {link.label}
               </Link>
             ))}
+            
+            {user?.role === 'admin' && (
+              <Link href="/admin" className="font-body text-base tracking-wider uppercase py-3 px-4 rounded transition-all duration-300 text-accent hover:bg-secondary/50">
+                Admin
+              </Link>
+            )}
+
+            {user ? (
+               <>
+                 <Link href="/profile" className="font-body text-base tracking-wider uppercase py-3 px-4 rounded transition-all duration-300 text-muted-foreground hover:text-primary hover:bg-secondary/50">
+                   Profile
+                 </Link>
+                 <button onClick={logout} className="text-left font-body text-base tracking-wider uppercase py-3 px-4 rounded transition-all duration-300 text-muted-foreground hover:text-primary hover:bg-secondary/50">
+                  Logout
+                 </button>
+               </>
+            ) : (
+              <Link href="/login" className="font-body text-base tracking-wider uppercase py-3 px-4 rounded transition-all duration-300 text-muted-foreground hover:text-primary hover:bg-secondary/50">
+                Login
+              </Link>
+            )}
           </div>
         </div>
       </div>

@@ -4,18 +4,22 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useCart } from "@/context/CartContext";
+import { useAuth } from "@/context/AuthContext";
 
 export default function CheckoutPage() {
   const router = useRouter();
   const { cart, totalPrice, clearCart } = useCart();
+  const { user } = useAuth();
+  
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   
+  const [paymentMethod, setPaymentMethod] = useState("cod");
   const [formData, setFormData] = useState({
-    name: "",
+    name: user?.name || "",
     phone: "",
-    email: "",
+    email: user?.email || "",
     address: "",
     city: ""
   });
@@ -30,18 +34,23 @@ export default function CheckoutPage() {
     setError("");
 
     try {
-      const orderPayload = {
+      const orderPayload: any = {
         customer: formData,
         products: cart.map(item => ({
-          productId: item.id, // Ensure this maps properly referencing ObjectId in DB
+          productId: item.id,
           name: item.name,
           price: item.price,
           quantity: item.quantity
         })),
-        totalPrice
+        totalPrice,
+        paymentMethod // e.g. "cod" or "card"
       };
 
-      const res = await fetch("http://localhost:5000/api/orders", {
+      if (user && user._id) {
+        orderPayload.user = user._id; // Attach logged in user
+      }
+
+      const res = await fetch("http://localhost:5001/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(orderPayload)
@@ -54,9 +63,8 @@ export default function CheckoutPage() {
       setSuccess(true);
       clearCart();
       
-      // Let success state show for 2 seconds then navigate
       setTimeout(() => {
-        router.push("/");
+        router.push(user ? "/profile" : "/");
       }, 3000);
 
     } catch (err: any) {
@@ -83,9 +91,9 @@ export default function CheckoutPage() {
         </svg>
         <h1 className="font-display text-4xl mb-4 text-primary">Order Confirmed!</h1>
         <p className="font-body text-muted-foreground mb-8">
-          Thank you for choosing El Marouki. We will contact you soon for delivery details.
+          Thank you for choosing El Marouki. Your order is now being processed.
         </p>
-        <p className="text-sm text-muted-foreground/60">Redirecting to homepage...</p>
+        <p className="text-sm text-muted-foreground/60">Redirecting...</p>
       </div>
     );
   }
@@ -152,12 +160,57 @@ export default function CheckoutPage() {
               />
             </div>
 
+            <h2 className="font-display text-2xl mb-4 mt-8 border-b border-border pb-2 pt-4">Payment Method</h2>
+            
+            <div className="space-y-4">
+              <label className="flex items-center gap-3 p-4 border border-border rounded cursor-pointer hover:border-primary transition-colors">
+                <input 
+                  type="radio" 
+                  name="paymentMethod" 
+                  value="cod" 
+                  checked={paymentMethod === "cod"}
+                  onChange={() => setPaymentMethod("cod")}
+                  className="w-4 h-4 text-primary accent-primary" 
+                />
+                <span className="font-body text-sm font-medium">Cash on Delivery</span>
+              </label>
+
+              <label className="flex items-center gap-3 p-4 border border-border rounded cursor-pointer hover:border-primary transition-colors">
+                <input 
+                  type="radio" 
+                  name="paymentMethod" 
+                  value="card" 
+                  checked={paymentMethod === "card"}
+                  onChange={() => setPaymentMethod("card")}
+                  className="w-4 h-4 text-primary accent-primary" 
+                />
+                <span className="font-body text-sm font-medium">Credit Card (Mock Demo)</span>
+              </label>
+            </div>
+
+            {paymentMethod === "card" && (
+              <div className="grid grid-cols-2 gap-4 mt-4 p-4 border border-border/50 bg-secondary/20 rounded">
+                 <div className="col-span-2 space-y-2">
+                   <label className="font-body text-xs font-medium">Card Number</label>
+                   <input type="text" placeholder="0000 0000 0000 0000" className="w-full bg-background border border-border rounded px-3 py-2 text-sm focus:outline-none focus:border-primary" />
+                 </div>
+                 <div className="space-y-2">
+                   <label className="font-body text-xs font-medium">Expiry</label>
+                   <input type="text" placeholder="MM/YY" className="w-full bg-background border border-border rounded px-3 py-2 text-sm focus:outline-none focus:border-primary" />
+                 </div>
+                 <div className="space-y-2">
+                   <label className="font-body text-xs font-medium">CVC</label>
+                   <input type="text" placeholder="123" className="w-full bg-background border border-border rounded px-3 py-2 text-sm focus:outline-none focus:border-primary" />
+                 </div>
+              </div>
+            )}
+
             <button 
               type="submit" 
               disabled={loading}
-              className={`btn-primary w-full text-center mt-6 ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
+              className={`btn-primary w-full text-center mt-8 ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
             >
-              {loading ? 'Processing...' : 'Place Order (Cash on Delivery)'}
+              {loading ? 'Processing...' : `Place Order • ${totalPrice.toLocaleString()} TND`}
             </button>
           </form>
         </div>

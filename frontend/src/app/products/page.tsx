@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import ProductGrid from "@/components/ProductGrid";
 import { products as localProducts } from "@/data/products";
 
@@ -14,13 +14,17 @@ const categories = [
 
 export default function ProductsPage() {
   const [activeCategory, setActiveCategory] = useState("all");
+  const [activeColor, setActiveColor] = useState("all");
+  const [activeSize, setActiveSize] = useState("all");
+  const [maxPrice, setMaxPrice] = useState<number>(10000); // 10k max limit loosely
+  
   const [products, setProducts] = useState(localProducts);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const res = await fetch("http://localhost:5000/api/products");
+        const res = await fetch("http://localhost:5001/api/products");
         if (res.ok) {
           const data = await res.json();
           if (data && data.length > 0) {
@@ -36,10 +40,40 @@ export default function ProductsPage() {
     fetchProducts();
   }, []);
 
-  const filtered =
-    activeCategory === "all"
-      ? products
-      : products.filter((p: any) => p.category === activeCategory);
+  // Compute available colors and sizes
+  const availableColors = useMemo(() => {
+    const colors = new Set<string>();
+    products.forEach(p => p.colors?.forEach((c: string) => colors.add(c)));
+    return ["all", ...Array.from(colors).sort()];
+  }, [products]);
+
+  const availableSizes = useMemo(() => {
+    const sizes = new Set<string>();
+    products.forEach(p => p.sizes?.forEach((s: string) => sizes.add(s)));
+    return ["all", ...Array.from(sizes).sort()];
+  }, [products]);
+
+  const maxProductPrice = useMemo(() => {
+    const prices = products.map(p => p.price);
+    return prices.length ? Math.max(...prices) : 10000;
+  }, [products]);
+
+  useEffect(() => {
+    if (maxPrice < maxProductPrice && maxPrice === 10000) {
+      setMaxPrice(maxProductPrice);
+    }
+  }, [maxProductPrice, maxPrice]);
+
+  const filtered = useMemo(() => {
+    return products.filter((p: any) => {
+      const matchCategory = activeCategory === "all" || p.category === activeCategory;
+      const matchColor = activeColor === "all" || p.colors?.includes(activeColor);
+      const matchSize = activeSize === "all" || p.sizes?.includes(activeSize);
+      const matchPrice = p.price <= maxPrice;
+      
+      return matchCategory && matchColor && matchSize && matchPrice;
+    });
+  }, [products, activeCategory, activeColor, activeSize, maxPrice]);
 
   return (
     <div className="pt-20">
@@ -58,9 +92,10 @@ export default function ProductsPage() {
         </p>
       </section>
 
-      {/* Category Filter */}
-      <section className="max-w-7xl mx-auto px-4 md:px-8 lg:px-16 -mt-6">
-        <div className="flex flex-wrap justify-center gap-2 md:gap-3 mt-10">
+      {/* Filters */}
+      <section className="max-w-7xl mx-auto px-4 md:px-8 lg:px-16 mt-8">
+        {/* Category Filter */}
+        <div className="flex flex-wrap justify-center gap-2 md:gap-3 mb-8">
           {categories.map((cat) => (
             <button
               key={cat.key}
@@ -74,15 +109,75 @@ export default function ProductsPage() {
             </button>
           ))}
         </div>
-      </section>
 
-      {/* Results count */}
-      <div className="max-w-7xl mx-auto px-4 md:px-8 lg:px-16 mt-8">
+        {/* Detailed Filters (Color, Size, Price) */}
+        <div className="bg-card p-6 rounded-lg border border-border shadow-sm flex flex-col md:flex-row gap-6 md:items-end mb-8">
+          
+          {/* Color Filter */}
+          <div className="flex-1 space-y-2">
+            <label className="font-display text-xs uppercase tracking-wider text-muted-foreground">Color</label>
+            <select 
+              value={activeColor}
+              onChange={(e) => setActiveColor(e.target.value)}
+              className="w-full bg-background border border-border rounded px-4 py-2.5 text-sm focus:outline-none focus:border-primary transition-colors"
+            >
+              {availableColors.map(c => (
+                <option key={c} value={c}>{c === 'all' ? 'All Colors' : c}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Size Filter */}
+          <div className="flex-1 space-y-2">
+            <label className="font-display text-xs uppercase tracking-wider text-muted-foreground">Size</label>
+            <select 
+              value={activeSize}
+              onChange={(e) => setActiveSize(e.target.value)}
+              className="w-full bg-background border border-border rounded px-4 py-2.5 text-sm focus:outline-none focus:border-primary transition-colors"
+            >
+              {availableSizes.map(s => (
+                <option key={s} value={s}>{s === 'all' ? 'All Sizes' : s}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Price Range Filter */}
+          <div className="flex-[2] space-y-2">
+            <label className="font-display text-xs uppercase tracking-wider text-muted-foreground flex justify-between">
+              <span>Max Price</span>
+              <span className="text-accent font-semibold">{maxPrice} TND</span>
+            </label>
+            <input 
+              type="range"
+              min="0"
+              max={maxProductPrice}
+              step="50"
+              value={maxPrice}
+              onChange={(e) => setMaxPrice(Number(e.target.value))}
+              className="w-full accent-primary h-2 bg-secondary rounded-lg appearance-none cursor-pointer"
+            />
+          </div>
+          
+          <div className="flex-none">
+            <button 
+              onClick={() => {
+                setActiveColor("all");
+                setActiveSize("all");
+                setMaxPrice(maxProductPrice);
+                setActiveCategory("all");
+              }}
+              className="font-body text-xs text-muted-foreground underline hover:text-primary transition-colors h-10 px-2"
+            >
+              Clear Filters
+            </button>
+          </div>
+        </div>
+
+        {/* Results count */}
         <p className="font-body text-sm text-muted-foreground">
           Showing {filtered.length} {filtered.length === 1 ? "piece" : "pieces"}
-          {activeCategory !== "all" && ` in ${categories.find(c => c.key === activeCategory)?.label}`}
         </p>
-      </div>
+      </section>
 
       {/* Products Grid */}
       <section className="section-padding max-w-7xl mx-auto !pt-6">
@@ -95,8 +190,11 @@ export default function ProductsPage() {
         ) : (
           <div className="text-center py-20">
             <p className="font-display text-xl text-muted-foreground">
-              No kaftans found in this category.
+              No kaftans match your current filters.
             </p>
+            <button onClick={() => { setActiveColor("all"); setActiveSize("all"); setMaxPrice(maxProductPrice); setActiveCategory("all"); }} className="btn-primary mt-4">
+              Clear All Filters
+            </button>
           </div>
         )}
       </section>

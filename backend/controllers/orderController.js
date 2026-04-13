@@ -4,16 +4,18 @@ const Order = require('../models/Order');
 // @route   POST /api/orders
 const addOrderItems = async (req, res) => {
   try {
-    const { customer, products, totalPrice } = req.body;
+    const { user, customer, products, totalPrice, paymentMethod } = req.body;
 
     if (products && products.length === 0) {
       res.status(400).json({ message: 'No order items' });
       return;
     } else {
       const order = new Order({
+        user,
         customer,
         products,
         totalPrice,
+        paymentMethod,
       });
 
       const createdOrder = await order.save();
@@ -70,9 +72,21 @@ const updateOrderStatus = async (req, res) => {
   }
 };
 
+// @desc    Get logged in user orders
+// @route   GET /api/orders/myorders
+const getMyOrders = async (req, res) => {
+  try {
+    const orders = await Order.find({ 'customer.email': req.user.email }).sort({ createdAt: -1 });
+    res.json(orders);
+  } catch (error) {
+    res.status(500).json({ message: 'Server Error', error: error.message });
+  }
+};
+
 module.exports = {
   addOrderItems,
   getOrders,
   getOrderById,
   updateOrderStatus,
+  getMyOrders,
 };
