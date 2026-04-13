@@ -105,7 +105,7 @@ export default function AdminDashboard() {
         price: product.price,
         stock: product.stock,
         category: product.category || "",
-        images: product.images.join(", "),
+        images: product.images ? product.images.join(", ") : "",
         isArchived: product.isArchived || false
       });
       setActiveSizes(product.sizes || []);
@@ -401,9 +401,31 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
+              <div className="space-y-2 border-t border-border pt-4">
+                <label className="font-body text-sm font-medium">Product Images (URLs or Upload)</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Comma separated image URLs"
+                    value={formData.images}
+                    onChange={e => setFormData({ ...formData, images: e.target.value })}
+                    className="flex-1 bg-background border border-border rounded px-3 py-2 text-sm"
+                  />
+                  <label className={`cursor-pointer bg-secondary px-4 py-2 ${uploading ? 'opacity-50' : ''} rounded text-sm hover:bg-border transition-colors flex items-center justify-center font-medium`}>
+                    {uploading ? "Uploading..." : "Upload"}
+                    <input type="file" className="hidden" onChange={(e) => uploadFileHandler(e, false)} accept="image/*" disabled={uploading} />
+                  </label>
+                </div>
+                {formData.images && (
+                  <div className="flex gap-2 flex-wrap mt-2 p-2 bg-secondary/10 rounded">
+                    {formData.images.split(",").map((img, idx) => img.trim() && (
+                      <img key={idx} src={img.trim()} alt="" className="h-16 w-16 object-cover rounded border border-border" />
+                    ))}
+                  </div>
+                )}
+              </div>
 
-
-              <div className="space-y-4">
+              <div className="space-y-4 pt-4 border-t border-border">
                 <label className="font-body text-sm font-medium">Sizes</label>
                 <div className="flex flex-wrap gap-4">
                   {PREDEFINED_SIZES.map(size => (

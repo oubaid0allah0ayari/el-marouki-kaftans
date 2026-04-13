@@ -31,7 +31,7 @@ const getProductById = async (req, res) => {
 // @route   POST /api/products
 const createProduct = async (req, res) => {
   try {
-    const { name, description, price, images, sizes, colors, stock, category, isArchived, variants } = req.body;
+    const { name, description, price, images, sizes, colors, stock, category, isArchived, variants, stockItems } = req.body;
 
     const product = new Product({
       name,
@@ -42,6 +42,7 @@ const createProduct = async (req, res) => {
       colors,
       variants: variants || [],
       stock,
+      stockItems: stockItems || [],
       category,
       isArchived: isArchived || false,
     });
@@ -58,7 +59,7 @@ const createProduct = async (req, res) => {
 // @route   PUT /api/products/:id
 const updateProduct = async (req, res) => {
   try {
-    const { name, description, price, images, sizes, colors, stock, category, isArchived, variants } = req.body;
+    const { name, description, price, images, sizes, colors, stock, category, isArchived, variants, stockItems } = req.body;
 
     const product = await Product.findById(req.params.id);
 
@@ -71,6 +72,7 @@ const updateProduct = async (req, res) => {
       product.colors = colors || product.colors;
       product.variants = variants || product.variants;
       product.stock = stock !== undefined ? stock : product.stock;
+      product.stockItems = stockItems || product.stockItems;
       product.category = category || product.category;
       product.isArchived = isArchived !== undefined ? isArchived : product.isArchived;
 

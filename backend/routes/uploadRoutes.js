@@ -1,33 +1,14 @@
-const path = require('path');
 const express = require('express');
 const multer = require('multer');
-const fs = require('fs');
+const Image = require('../models/Image');
 const router = express.Router();
 
-// Ensure uploads directory exists
-const uploadDir = path.join(__dirname, '..', 'uploads');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
-
-const storage = multer.diskStorage({
-  destination(req, file, cb) {
-    cb(null, 'uploads/');
-  },
-  filename(req, file, cb) {
-    cb(
-      null,
-      `${file.fieldname}-${Date.now()}${path.extname(file.originalname)}`
-    );
-  },
-});
+const storage = multer.memoryStorage();
 
 function checkFileType(file, cb) {
-  const filetypes = /jpg|jpeg|png|webp/;
-  const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+  const filetypes = /jpg|jpeg|png|webp|gif/;
   const mimetype = filetypes.test(file.mimetype);
-
-  if (extname && mimetype) {
+  if (mimetype) {
     return cb(null, true);
   } else {
     cb('Images only!');
@@ -41,11 +22,43 @@ const upload = multer({
   },
 });
 
-router.post('/', upload.single('image'), (req, res) => {
-  if (!req.file) {
-    return res.status(400).send({ message: 'No file uploaded' });
+// Upload image and save to MongoDB
+router.post('/', upload.single('image'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).send({ message: 'No file uploaded' });
+    }
+
+    const image = new Image({
+      name: req.file.originalname,
+      data: req.file.buffer,
+      contentType: req.file.mimetype
+    });
+
+    const savedImage = await image.save();
+    
+    // Return relative URL pointing to the new DB image fetching route
+    res.send({ url: `/api/upload/db/${savedImage._id}` });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send({ message: 'Error uploading image to database' });
   }
-  res.send({ url: `/${req.file.path.replace(/\\/g, '/')}` });
+});
+
+// Fetch image directly from MongoDB
+router.get('/db/:id', async (req, res) => {
+  try {
+    const image = await Image.findById(req.params.id);
+    if (!image) {
+      return res.status(404).send({ message: 'Image not found in database' });
+    }
+
+    res.set('Content-Type', image.contentType);
+    res.send(image.data);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send({ message: 'Error fetching image' });
+  }
 });
 
 module.exports = router;

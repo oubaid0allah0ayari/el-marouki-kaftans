@@ -23,6 +23,47 @@ export default function ProductDetailsPage() {
   const [quantity, setQuantity] = useState(1);
   const [addedToCart, setAddedToCart] = useState(false);
 
+  const availableStock = (() => {
+    let stock = product?.stock || 0;
+    if (product?.stockItems && product.stockItems.length > 0 && selectedSize && selectedColor) {
+      const si = product.stockItems.find((s:any) => s.size === selectedSize && s.color === selectedColor);
+      stock = si ? si.stock : 0;
+    }
+    return stock;
+  })();
+
+  useEffect(() => {
+    if (selectedSize && selectedColor && availableStock >= 0) {
+      if (quantity > availableStock && availableStock > 0) {
+        setQuantity(availableStock);
+      } else if (availableStock === 0 && quantity > 1) {
+        setQuantity(1);
+      }
+    }
+  }, [selectedSize, selectedColor, availableStock, quantity]);
+
+  const isSizeOutOfStock = (size: string) => {
+    if (!product?.stockItems || product.stockItems.length === 0) return false;
+    if (selectedColor) {
+      const si = product.stockItems.find((s:any) => s.size === size && s.color === selectedColor);
+      return si ? si.stock <= 0 : true;
+    }
+    const sizeItems = product.stockItems.filter((s:any) => s.size === size);
+    if (sizeItems.length === 0) return true;
+    return sizeItems.every((s:any) => s.stock <= 0);
+  };
+
+  const isColorOutOfStock = (colorName: string) => {
+    if (!product?.stockItems || product.stockItems.length === 0) return false;
+    if (selectedSize) {
+      const si = product.stockItems.find((s:any) => s.size === selectedSize && s.color === colorName);
+      return si ? si.stock <= 0 : true;
+    }
+    const colorItems = product.stockItems.filter((s:any) => s.color === colorName);
+    if (colorItems.length === 0) return true;
+    return colorItems.every((s:any) => s.stock <= 0);
+  };
+
   // Helper color map string -> hex
   const getColorHex = (colorName: string) => {
     const map: Record<string, string> = {
@@ -123,12 +164,7 @@ export default function ProductDetailsPage() {
   };
 
   const currentDisplayImg = mainImage || (product.images && product.images.length > 0 ? product.images[0] : (product.image || "/images/kaftan-1.jpg"));
-  let availableStock = product?.stock || 0;
-  if (product?.stockItems && product.stockItems.length > 0 && selectedSize && selectedColor) {
-    const si = product.stockItems.find((s:any) => s.size === selectedSize && s.color === selectedColor);
-    availableStock = si ? si.stock : 0;
-  }
-  const isOutOfStock = availableStock <= 0;
+  const isOutOfStock = availableStock <= 0 && selectedSize && selectedColor;
 
   return (
     <div className="pt-20">
@@ -184,18 +220,29 @@ export default function ProductDetailsPage() {
                 )}
               </div>
               <div className="flex flex-wrap gap-3">
-                {product.sizes?.map((size: string) => (
+                {product.sizes?.map((size: string) => {
+                  const outOfStock = isSizeOutOfStock(size);
+                  return (
                   <button
                     key={size}
-                    onClick={() => setSelectedSize(size)}
-                    className={`w-14 h-14 rounded-sm border text-sm font-body font-medium transition-all duration-300 ${selectedSize === size
+                    onClick={() => !outOfStock && setSelectedSize(size)}
+                    disabled={outOfStock}
+                    className={`relative w-14 h-14 rounded-sm border text-sm font-body font-medium transition-all duration-300 ${
+                      outOfStock 
+                      ? "opacity-40 cursor-not-allowed bg-secondary border-border" 
+                      : selectedSize === size
                       ? "bg-primary text-primary-foreground border-primary shadow-md"
                       : "border-border text-foreground hover:border-primary hover:shadow-sm"
                       }`}
                   >
                     {size}
+                    {outOfStock && (
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
+                         <div className="w-[140%] h-[1.5px] bg-red-500/50 -rotate-45" />
+                      </div>
+                    )}
                   </button>
-                ))}
+                )})}
               </div>
             </div>
 
@@ -211,17 +258,22 @@ export default function ProductDetailsPage() {
               </div>
               <div className="flex flex-wrap gap-4">
                 {product.variants && product.variants.length > 0 ? (
-                  product.variants.map((variant: any) => (
+                  product.variants.map((variant: any) => {
+                    const outOfStock = isColorOutOfStock(variant.colorName);
+                    return (
                     <button
                       key={variant.colorName}
                       onClick={() => {
+                          if (outOfStock) return;
                           setSelectedColor(variant.colorName);
                           if (variant.image) {
                             setMainImage(variant.image);
                           }
                       }}
-                      title={variant.colorName}
+                      title={variant.colorName + (outOfStock ? " (Out of Stock)" : "")}
+                      disabled={outOfStock}
                       className={`relative w-8 h-8 rounded-full shadow-sm transition-all duration-300 ${
+                        outOfStock ? "opacity-30 cursor-not-allowed grayscale" :
                         selectedColor === variant.colorName ? "ring-2 ring-offset-2 ring-primary scale-110" : "hover:scale-105 border border-border"
                       }`}
                       style={{ backgroundColor: variant.hexCode }}
@@ -229,13 +281,21 @@ export default function ProductDetailsPage() {
                        {(variant.hexCode.toLowerCase() === '#ffffff') && (
                           <span className="absolute inset-0 rounded-full border border-black/10 pointer-events-none"></span>
                        )}
+                       {outOfStock && (
+                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden rounded-full">
+                           <div className="w-[140%] h-[2px] bg-red-600 -rotate-45" />
+                        </div>
+                       )}
                     </button>
-                  ))
+                  )})
                 ) : (
-                  product.colors?.map((color: string, index: number) => (
+                  product.colors?.map((color: string, index: number) => {
+                    const outOfStock = isColorOutOfStock(color);
+                    return (
                     <button
                       key={color}
                       onClick={() => {
+                          if (outOfStock) return;
                           setSelectedColor(color);
                           if (product.images && product.images[index]) {
                             setMainImage(product.images[index]);
@@ -243,8 +303,10 @@ export default function ProductDetailsPage() {
                             setMainImage(product.images[0]);
                           }
                       }}
-                      title={color}
+                      title={color + (outOfStock ? " (Out of Stock)" : "")}
+                      disabled={outOfStock}
                       className={`relative w-8 h-8 rounded-full shadow-sm transition-all duration-300 ${
+                        outOfStock ? "opacity-30 cursor-not-allowed grayscale" :
                         selectedColor === color ? "ring-2 ring-offset-2 ring-primary scale-110" : "hover:scale-105 border border-border"
                       }`}
                       style={{ backgroundColor: getColorHex(color) }}
@@ -252,8 +314,13 @@ export default function ProductDetailsPage() {
                       {(getColorHex(color) === '#ffffff' || getColorHex(color) === '#fdfbf7') && (
                          <span className="absolute inset-0 rounded-full border border-black/10 pointer-events-none"></span>
                       )}
+                      {outOfStock && (
+                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden rounded-full">
+                           <div className="w-[140%] h-[2px] bg-red-600 -rotate-45" />
+                        </div>
+                       )}
                     </button>
-                  ))
+                  )})
                 )}
               </div>
             </div>
@@ -263,23 +330,35 @@ export default function ProductDetailsPage() {
               <h3 className="font-display text-sm font-semibold text-foreground uppercase tracking-wider mb-3">
                 Quantity
               </h3>
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  className="w-12 h-12 rounded-sm border border-border hover:border-primary transition-colors flex items-center justify-center"
-                >
-                  −
-                </button>
-                <span className="font-display text-lg font-semibold w-12 text-center">
-                  {quantity}
-                </span>
-                <button
-                  onClick={() => setQuantity(Math.min(quantity + 1, availableStock || 1))}
-                  disabled={isOutOfStock || quantity >= availableStock}
-                  className={`w-12 h-12 rounded-sm border border-border transition-colors flex items-center justify-center ${isOutOfStock || quantity >= availableStock ? 'opacity-50 cursor-not-allowed' : 'hover:border-primary'}`}
-                >
-                  +
-                </button>
+              <div className="flex items-center gap-6">
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                    className="w-12 h-12 rounded-sm border border-border hover:border-primary transition-colors flex items-center justify-center"
+                  >
+                    −
+                  </button>
+                  <span className="font-display text-lg font-semibold w-12 text-center">
+                    {quantity}
+                  </span>
+                  <button
+                    onClick={() => setQuantity(Math.min(quantity + 1, availableStock || 1))}
+                    disabled={isOutOfStock || quantity >= availableStock}
+                    className={`w-12 h-12 rounded-sm border border-border transition-colors flex items-center justify-center ${isOutOfStock || quantity >= availableStock ? 'opacity-50 cursor-not-allowed' : 'hover:border-primary'}`}
+                  >
+                    +
+                  </button>
+                </div>
+                {selectedColor && selectedSize && availableStock > 0 && availableStock <= 5 && (
+                  <span className="text-xs font-medium text-orange-600 bg-orange-600/10 px-3 py-1.5 rounded uppercase tracking-wider font-display">
+                    Only {availableStock} left
+                  </span>
+                )}
+                {selectedColor && selectedSize && availableStock === 0 && (
+                  <span className="text-xs font-medium text-red-600 bg-red-600/10 px-3 py-1.5 rounded uppercase tracking-wider font-display">
+                    Out of Stock
+                  </span>
+                )}
               </div>
             </div>
 
